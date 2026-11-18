@@ -67,16 +67,29 @@ class GuessResult:
 class HangmanGame:    
     def __init__(self, word: str, lives: int = 6):
         '''
-                    Atributo	            Tipo	    Finalidade
-                    word	                str	        Palavra secreta normalizada
-                    initial_lives	        int	        Quantidade inicial de vidas
-                    lives	                int	        Vidas restantes
-                    correct_letters	        set	        Letras corretas descobertas
-                    wrong_letters	        list	    Letras incorretas, na ordem das tentativas
-                    used_letters	        set	        Todas as letras já utilizadas
-       
-         '''
+        Atributo	            Tipo	    Finalidade
+        word	                str	        Palavra secreta normalizada
+        initial_lives	        int	        Quantidade inicial de vidas
+        lives	                int	        Vidas restantes
+        correct_letters	        set	        Letras corretas descobertas
+        wrong_letters	        list	    Letras incorretas, na ordem das tentativas
+        used_letters	        set	        Todas as letras já utilizadas
 
+         '''
+        
+        # Valida a palavra e o nr de vidas
+        if not isinstance(word, str):
+            raise TypeError("A palavra deve ser uma string")
+
+        word = normalize_word(word)
+
+        if not validate_word(word):
+            raise ValueError("A palavra deve ter entre 3 e 20 letras, contendo apenas a-z")
+
+        if not isinstance(lives, int) or isinstance(lives, bool) or lives <= 0:
+            raise ValueError("A quantidade de vidas deve ser um inteiro positivo")
+
+        # construtor
         self.word: str = word
         self.masked_word: str = ''       
         self.initial_lives: int = lives    
@@ -85,7 +98,11 @@ class HangmanGame:
         self.wrong_letters: list = []
         self.used_letters: set = set()
 
-    #Retorna a palavra com as letras descobertas e as letras ocultas.
+        # inicializa a máscara da palavra
+        self.get_masked_word()
+
+    # Retorna a palavra com as letras descobertas
+    # e as letras ocultas.
     def get_masked_word(self) -> str:
         if self.masked_word == self.word:
             return self.masked_word
@@ -110,7 +127,7 @@ class HangmanGame:
             jogada.reason = "game_not_running"
         else:
             letter_normalize = normalize_word(letter)
-            is_accepted_letter = bool(re.fullmatch(r'[a-z]+', letter_normalize))
+            is_accepted_letter = bool(re.fullmatch(r'[a-z]', letter_normalize))
             if not is_accepted_letter:
                 jogada.is_accepted = False
                 jogada.is_correct = False
@@ -138,13 +155,24 @@ class HangmanGame:
                             self.remaining_lives = self.remaining_lives - 1
                             if(self.remaining_lives < 0):
                                 self.remaining_lives = 0
-        jogada.word_revealed_count =  len(self.correct_letters)
+        # --------------------------------------------------------
+        # Conta a letra sem repeticoes
+        # jogada.word_revealed_count =  len(self.correct_letters)
+        # --------------------------------------------------------
+        # Conta a letra acertada com repeticoes. Ou seja,
+        # contabiliza todas as ocorrências reveladas
+        jogada.word_revealed_count = (
+            self.word.count(letter_normalize)
+            if jogada.is_accepted and jogada.is_correct
+            else 0
+        )
         return jogada
 
 
     #Permite que o jogador tente descobrir a palavra inteira, retorna uma estrutura com informações da jogada
     def guess_word(self, word: str) -> GuessResult:
         jogada = GuessResult(False, False, None, 0)
+        revealed_count = 0
 
         if self.is_finished():
             jogada.is_accepted = False
@@ -160,7 +188,9 @@ class HangmanGame:
             else:
                 if is_accepted_word:
                     if word_normalize == self.word:
-                        self.masked_word = word
+                        # Contabiliza as letras que faltavam
+                        revealed_count = self.masked_word.count("_")
+                        self.masked_word = self.word
                         self.correct_letters = self.correct_letters | set(word_normalize)
                         jogada.is_accepted = True
                         jogada.is_correct = True
@@ -173,7 +203,9 @@ class HangmanGame:
                         jogada.is_correct = False
                         jogada.reason = None
                     
-        jogada.word_revealed_count =  len(self.correct_letters)
+        # jogada.word_revealed_count =  len(self.correct_letters)
+        jogada.word_revealed_count = revealed_count
+
         return jogada
 
     #Verifica se todas as letras da palavra foram reveladas
@@ -190,17 +222,19 @@ class HangmanGame:
 
     #Retorna a lista de letras incorretas
     def get_wrong_letters(self) -> list[str]:
-        return self.wrong_letters
+        # Não entrega a lista original
+        return self.wrong_letters.copy()
+    
     #Retorna uma representação do estado atual da forca
     def get_state(self) -> dict:
         
         state_info = {
     
             "masked_word": self.masked_word,
-            "wrong_letters": self.wrong_letters,
+            "wrong_letters": self.wrong_letters.copy(),
             "remaining_lives": self.remaining_lives,
             "initial_lives": self.initial_lives,
-            "isfinished": self.is_finished(),
+            "is_finished": self.is_finished(),
             "result": "WON" if self.is_won() else ("LOST" if self.is_lost() else None)
         }
 
