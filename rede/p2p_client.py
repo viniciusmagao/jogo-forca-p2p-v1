@@ -85,7 +85,8 @@ class P2PNetwork:
     """
     Rede P2P independente da lógica do jogo.
 
-    message_handler(peer_id, message): callback para mensagens da partida.
+    message_handler(peer_id, message): callback para mensagens 
+    da partida.
     peer_handler(event, peer_id): 'CONNECTED', 'STALE' ou 'GONE'.
     Callbacks podem ser funções normais ou async.
 
